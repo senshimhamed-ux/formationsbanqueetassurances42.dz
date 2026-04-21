@@ -257,7 +257,7 @@
     <div id="adminView" class="hidden admin-view">
         <div id="loginSection" class="glass-card login-box">
             <h2 data-i18n="adminLogin">Connexion Admin</h2>
-            <input type="password" id="adminPwd" placeholder="Mot de passe">
+            <input type="password" id="adminPwd" placeholder="Mot de passe (admin123)">
             <button class="btn-gold mt-2" id="loginBtn" data-i18n="btnLogin">Entrer</button>
         </div>
 
@@ -286,7 +286,7 @@
     <script>
         // === CUSTOM BACKEND API ENDPOINT ===
         // Change this to match your specific Replit backend URL structure.
-        const API_BASE_URL = "https://your-app.onrender.com/api/reservations";
+        const API_BASE_URL = "https://reservation-api-jyod.onrender.com/api/reservations";
 
         // === TRANSLATIONS ===
         const translations = {
@@ -449,7 +449,7 @@
                 document.getElementById('dashboardSection').classList.remove('hidden');
                 fetchAdminData(); // Initial load
             } else {
-                alert("Mot de passe incorrect.");
+                alert("Mot de passe incorrect. (admin123)");
             }
         });
 
