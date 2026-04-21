@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banque et Assurance</title>
+    <style>
+        /* ================= CSS ================= */
+        :root {
+            --bg-color: #0d0d0d;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --gold: #D4AF37;
+            --gold-hover: #b5952f;
+            --neon-blue: #00f3ff;
+            --text-main: #ffffff;
+            --text-muted: #b3b3b3;
+            --status-pending: #ff9800;
+            --status-paid: #4caf50;
+            --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); }
+        body { background-color: var(--bg-color); color: var(--text-main); overflow-x: hidden; scroll-behavior: smooth; }
+
+        /* RTL Support */
+        [dir="rtl"] { text-align: right; }
+        [dir="rtl"] .lang-switcher { margin-right: auto; margin-left: 0; }
+        [dir="rtl"] .admin-table { text-align: right; }
+
+        /* Background Animation */
+        .bg-animation {
+            position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at center, rgba(0, 243, 255, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at bottom right, rgba(212, 175, 55, 0.05) 0%, transparent 40%);
+            z-index: -1; animation: rotateBg 30s linear infinite;
+        }
+        @keyframes rotateBg { 100% { transform: rotate(360deg); } }
+
+        /* Glassmorphism */
+        .glass-nav {
+            position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center;
+            padding: 1.5rem 5%; background: rgba(13, 13, 13, 0.7); backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--glass-border); z-index: 1000;
+        }
+        .glass-card {
+            background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+            border-radius: 15px; padding: 2rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        /* Typography & Controls */
+        .gradient-text {
+            background: linear-gradient(45deg, var(--gold), var(--neon-blue)); -webkit-background-clip: text;
+            background-clip: text; color: transparent; font-size: 4rem; margin-bottom: 1rem;
+        }
+        .section-title { text-align: center; font-size: 2.5rem; margin: 4rem 0 2rem 0; }
+        
+        .btn-gold {
+            background: var(--gold); color: #000; border: none; padding: 1rem 2rem; border-radius: 30px;
+            font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block;
+        }
+        .btn-gold:hover { background: var(--gold-hover); box-shadow: 0 0 15px var(--gold); }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.9rem; margin: 0.2rem; }
+
+        .lang-switcher button {
+            background: transparent; border: 1px solid var(--text-muted); color: var(--text-main);
+            padding: 0.4rem 0.8rem; border-radius: 5px; cursor: pointer; margin-left: 0.5rem; transition: 0.3s;
+        }
+        .lang-switcher button:hover { background: var(--gold); color: #000; border-color: var(--gold); }
+
+        /* Form Elements */
+        .form-container { max-width: 600px; margin: auto; }
+        .input-group { margin-bottom: 1.5rem; text-align: start; }
+        .input-group label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); }
+        .input-group input, .input-group select {
+            width: 100%; padding: 1rem; border-radius: 8px; background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border); color: #fff; font-size: 1rem; outline: none; appearance: none;
+        }
+        .input-group select option { background: #1a1a1a; color: #fff; }
+        .input-group input:focus, .input-group select:focus { border-color: var(--neon-blue); }
+        ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+        .form-note { display: block; margin-top: 0.5rem; color: var(--gold); font-size: 0.85rem; font-weight: 500;}
+
+        /* Conditional Animation */
+        .conditional-group {
+            max-height: 0; opacity: 0; overflow: hidden; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 0 1rem; border-left: 2px solid transparent;
+        }
+        .conditional-group.show {
+            max-height: 600px; opacity: 1; margin-bottom: 1rem; border-left: 2px solid var(--neon-blue);
+        }
+        [dir="rtl"] .conditional-group.show { border-left: none; border-right: 2px solid var(--neon-blue); }
+
+        /* Client View Layout */
+        .hero { height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .hero-content p { font-size: 1.5rem; color: var(--text-muted); margin-bottom: 2rem; }
+        .container, .objectives, .program, .reservation { padding: 5%; max-width: 1200px; margin: auto; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; }
+        .module { text-align: center; padding: 2rem; }
+
+        /* Admin View Layout */
+        .admin-view { padding-top: 100px; min-height: 100vh; }
+        .login-box { max-width: 400px; margin: 10vh auto; text-align: center; }
+        .login-box input { width: 100%; padding: 1rem; margin-top: 1rem; border-radius: 8px; background: #000; color: #fff; border: 1px solid var(--glass-border); }
+        .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .admin-table th, .admin-table td { padding: 1rem; border-bottom: 1px solid var(--glass-border); }
+        .status { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
+        .status.pending { background: rgba(255, 152, 0, 0.2); color: var(--status-pending); border: 1px solid var(--status-pending); }
+        .status.paid { background: rgba(76, 175, 80, 0.2); color: var(--status-paid); border: 1px solid var(--status-paid); }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        .mt-2 { margin-top: 1rem; }
+        .text-center { text-align: center; }
+        .view-switcher { text-align: center; padding: 2rem; border-top: 1px solid var(--glass-border); margin-top: 2rem; cursor: pointer; color: var(--text-muted); }
+        .view-switcher:hover { color: var(--gold); }
+
+        @media (max-width: 768px) { .gradient-text { font-size: 2.5rem; } }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <nav class="glass-nav">
+        <div class="logo" data-i18n="navTitle">Banque & Assurance</div>
+        <div class="lang-switcher">
+            <button onclick="setLanguage('fr')">FR</button>
+            <button onclick="setLanguage('ar')">AR</button>
+            <button onclick="setLanguage('en')">EN</button>
+        </div>
+    </nav>
+
+    <div id="clientView">
+        <header class="hero">
+            <div class="hero-content">
+                <h1 class="gradient-text" data-i18n="heroTitle">Banque et Assurance</h1>
+                <p data-i18n="heroSubtitle">Formation complète en banque et assurance</p>
+                <a href="#reservation" class="btn-gold" data-i18n="heroBtn">S'inscrire maintenant</a>
+            </div>
+        </header>
+
+        <section class="objectives" id="objectives">
+            <h2 class="section-title" data-i18n="objTitle">Objectifs de la formation</h2>
+            <div class="glass-card obj-card">
+                <p data-i18n="objIntro">Permettre aux participants de comprendre :</p>
+                <ul style="padding-inline-start: 2rem; margin-top: 1rem;">
+                    <li data-i18n="obj1">Comment fonctionnent les banques</li>
+                    <li data-i18n="obj2">Les types de services bancaires</li>
+                    <li data-i18n="obj3">Les fondamentaux de l'assurance et ses types</li>
+                    <li data-i18n="obj4">Les compétences de travail dans le secteur financier</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="program">
+            <h2 class="section-title" data-i18n="progTitle">Programme (8 Modules)</h2>
+            <div class="grid-container">
+                <div class="glass-card module"><h3 data-i18n="mod1">Module 1</h3></div>
+                <div class="glass-card module"><h3 data-i18n="mod2">Module 2</h3></div>
+                <div class="glass-card module"><h3 data-i18n="mod3">Module 3</h3></div>
+                <div class="glass-card module"><h3 data-i18n="mod4">Module 4</h3></div>
+                <div class="glass-card module"><h3 data-i18n="mod5">Module 5</h3></div>
+                <div class="glass-card module"><h3 data-i18n="mod6">Module 6</h3></div>
+                <div class="glass-card module"><h3 data-i18n="mod7">Module 7</h3></div>
+                <div class="glass-card module"><h3 data-i18n="mod8">Module 8</h3></div>
+            </div>
+        </section>
+
+        <section class="reservation" id="reservation">
+            <h2 class="section-title" data-i18n="formTitle">Réserver votre place</h2>
+            <div class="glass-card form-container">
+                <form id="reservationForm">
+                    
+                    <div class="input-group">
+                        <label data-i18n="lblFirstName">Prénom</label>
+                        <input type="text" id="firstName" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label data-i18n="lblLastName">Nom</label>
+                        <input type="text" id="lastName" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label data-i18n="lblBirthday">Date de naissance</label>
+                        <input type="date" id="birthday" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label data-i18n="lblStatus">Statut</label>
+                        <select id="statusSelect" required>
+                            <option value="" disabled selected data-i18n="optSelect">-- Choisir --</option>
+                            <option value="student" data-i18n="optStudent">Étudiant</option>
+                            <option value="non-student" data-i18n="optNonStudent">Non étudiant</option>
+                        </select>
+                    </div>
+
+                    <div id="studentFields" class="conditional-group">
+                        <div class="input-group">
+                            <label data-i18n="lblSpecialization">Spécialité</label>
+                            <input type="text" id="specialization">
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="lblLevel">Niveau</label>
+                            <input type="text" id="level">
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="lblUniversity">Université</label>
+                            <input type="text" id="university">
+                        </div>
+                    </div>
+
+                    <div id="nonStudentFields" class="conditional-group">
+                        <div class="input-group">
+                            <label data-i18n="lblEmployment">Situation professionnelle</label>
+                            <select id="employmentSelect">
+                                <option value="" disabled selected data-i18n="optSelect">-- Choisir --</option>
+                                <option value="employed" data-i18n="optEmployed">Employé</option>
+                                <option value="unemployed" data-i18n="optUnemployed">Chômeur</option>
+                            </select>
+                        </div>
+                        
+                        <div id="jobField" class="conditional-group">
+                            <div class="input-group">
+                                <label data-i18n="lblJobName">Nom du poste</label>
+                                <input type="text" id="jobName">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label data-i18n="lblWilaya">Wilaya de résidence</label>
+                        <input type="text" id="wilaya" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label data-i18n="lblPhone">Téléphone</label>
+                        <input type="tel" id="phone" required>
+                        <small class="form-note" data-i18n="noteTelegram">Veuillez entrer un numéro de téléphone actif sur Telegram</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label data-i18n="lblEmail">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+
+                    <button type="submit" class="btn-gold" id="submitBtn" data-i18n="btnSubmit">Réserver</button>
+                </form>
+                <div id="formMessage" class="hidden text-center mt-2"></div>
+            </div>
+        </section>
+
+        <div class="view-switcher" onclick="switchView('admin')" data-i18n="switchAdmin">🔒 Accès Administrateur</div>
+    </div>
+
+    <div id="adminView" class="hidden admin-view">
+        <div id="loginSection" class="glass-card login-box">
+            <h2 data-i18n="adminLogin">Connexion Admin</h2>
+            <input type="password" id="adminPwd" placeholder="Mot de passe (admin123)">
+            <button class="btn-gold mt-2" id="loginBtn" data-i18n="btnLogin">Entrer</button>
+        </div>
+
+        <div id="dashboardSection" class="hidden container">
+            <h2 class="section-title" data-i18n="adminTitle">Inscriptions Récentes</h2>
+            <div class="glass-card" style="overflow-x: auto;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="colFirstName">Prénom</th>
+                            <th data-i18n="colLastName">Nom</th>
+                            <th data-i18n="colPhone">Téléphone</th>
+                            <th data-i18n="colStatus">Statut</th>
+                            <th data-i18n="colAction">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTable">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="view-switcher" onclick="switchView('client')" data-i18n="switchClient">⬅ Retour au site</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // === FIREBASE CONFIG ===
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        let db;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+        } catch (e) {
+            console.log("Firebase not configured yet. Running in demo mode.");
+        }
+
+        // === TRANSLATIONS ===
+        const translations = {
+            en: {
+                navTitle: "Banking & Insurance", heroTitle: "Banking and Insurance", heroSubtitle: "Complete Course", heroBtn: "Enroll Now", formTitle: "Reserve Your Seat",
+                lblFirstName: "First Name", lblLastName: "Last Name", lblEmail: "Email", btnSubmit: "Reserve", msgSuccess: "Reservation successful!",
+                lblBirthday: "Date of Birth", lblStatus: "Status", optSelect: "-- Select --", optStudent: "Student", optNonStudent: "Non-student",
+                lblSpecialization: "Specialization", lblLevel: "Level", lblUniversity: "University", lblEmployment: "Employment Status", optEmployed: "Employed",
+                optUnemployed: "Unemployed", lblJobName: "Job Name", lblWilaya: "Wilaya of residence", lblPhone: "Phone Number", noteTelegram: "Please enter a phone number active on Telegram",
+                objTitle: "Course Objectives", objIntro: "Enable participants to understand:", obj1: "How banks operate", obj2: "Types of banking services", obj3: "Insurance basics and types", obj4: "Work skills in the financial sector",
+                progTitle: "Program (8 Modules)", mod1: "1. Intro to Banking", mod2: "2. Bank Operations", mod3: "3. Credit & Loans", mod4: "4. Insurance Basics", mod5: "5. Life Insurance", mod6: "6. Property Insurance", mod7: "7. Risk Management", mod8: "8. Professional Ethics",
+                adminLogin: "Admin Login", btnLogin: "Enter", adminTitle: "Recent Registrations", colFirstName: "First Name", colLastName: "Last Name", colPhone: "Phone", colStatus: "Status", colAction: "Actions", btnPaid: "Mark Paid", btnDelete: "Delete", statusPending: "Pending", statusPaid: "Paid", switchAdmin: "🔒 Admin Access", switchClient: "⬅ Back to Site"
+            },
+            fr: {
+                navTitle: "Banque & Assurance", heroTitle: "Banque et Assurance", heroSubtitle: "Formation complète", heroBtn: "S'inscrire", formTitle: "Réserver votre place",
+                lblFirstName: "Prénom", lblLastName: "Nom", lblEmail: "Email", btnSubmit: "Réserver", msgSuccess: "Réservation réussie !",
+                lblBirthday: "Date de naissance", lblStatus: "Statut", optSelect: "-- Choisir --", optStudent: "Étudiant", optNonStudent: "Non étudiant",
+                lblSpecialization: "Spécialité", lblLevel: "Niveau", lblUniversity: "Université", lblEmployment: "Situation pro.", optEmployed: "Employé",
+                optUnemployed: "Chômeur", lblJobName: "Nom du poste", lblWilaya: "Wilaya de résidence", lblPhone: "Téléphone", noteTelegram: "Veuillez entrer un numéro actif sur Telegram",
+                objTitle: "Objectifs de la formation", objIntro: "Permettre aux participants de comprendre :", obj1: "Comment fonctionnent les banques", obj2: "Les types de services bancaires", obj3: "Les fondamentaux de l'assurance", obj4: "Compétences du secteur financier",
+                progTitle: "Programme (8 Modules)", mod1: "1. Intro à la Banque", mod2: "2. Opérations", mod3: "3. Crédits", mod4: "4. Bases Assurance", mod5: "5. Assurance Vie", mod6: "6. Assurance Dommages", mod7: "7. Gestion Risques", mod8: "8. Éthique Pro.",
+                adminLogin: "Connexion Admin", btnLogin: "Entrer", adminTitle: "Inscriptions Récentes", colFirstName: "Prénom", colLastName: "Nom", colPhone: "Téléphone", colStatus: "Statut", colAction: "Actions", btnPaid: "Payé", btnDelete: "Supprimer", statusPending: "En attente", statusPaid: "Payé", switchAdmin: "🔒 Accès Administrateur", switchClient: "⬅ Retour au site"
+            },
+            ar: {
+                navTitle: "بنوك وتأمين", heroTitle: "بنوك وتأمين", heroSubtitle: "دورة شاملة", heroBtn: "سجل الآن", formTitle: "احجز مقعدك",
+                lblFirstName: "الاسم", lblLastName: "اللقب", lblEmail: "البريد", btnSubmit: "حجز", msgSuccess: "تم الحجز بنجاح!",
+                lblBirthday: "تاريخ الميلاد", lblStatus: "الحالة", optSelect: "-- اختر --", optStudent: "طالب", optNonStudent: "غير طالب",
+                lblSpecialization: "تخصص", lblLevel: "مستوى", lblUniversity: "جامعة", lblEmployment: "الوضع المهني", optEmployed: "موظف",
+                optUnemployed: "بطال", lblJobName: "اسم الوظيفة", lblWilaya: "الولاية", lblPhone: "رقم الهاتف", noteTelegram: "يرجى إدخال رقم هاتف مفعل على تيليجرام",
+                objTitle: "أهداف الدورة", objIntro: "تمكين المشاركين من فهم:", obj1: "كيفية عمل البنوك", obj2: "أنواع الخدمات البنكية", obj3: "أساسيات التأمين", obj4: "مهارات القطاع المالي",
+                progTitle: "البرنامج (8 وحدات)", mod1: "1. مقدمة في البنوك", mod2: "2. العمليات المصرفية", mod3: "3. الائتمان", mod4: "4. أساسيات التأمين", mod5: "5. تأمين الحياة", mod6: "6. تأمين الممتلكات", mod7: "7. إدارة المخاطر", mod8: "8. أخلاقيات المهنة",
+                adminLogin: "تسجيل دخول الإدارة", btnLogin: "دخول", adminTitle: "التسجيلات الحديثة", colFirstName: "الاسم", colLastName: "اللقب", colPhone: "الهاتف", colStatus: "الحالة", colAction: "إجراءات", btnPaid: "تم الدفع", btnDelete: "حذف", statusPending: "قيد الانتظار", statusPaid: "مدفوع", switchAdmin: "🔒 دخول الإدارة", switchClient: "⬅ العودة للموقع"
+            }
+        };
+
+        // === LANGUAGE SYSTEM ===
+        window.setLanguage = (lang) => {
+            localStorage.setItem('prefLang', lang);
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if(translations[lang][key]) el.textContent = translations[lang][key];
+            });
+
+            if(window.currentAdminData) renderTable(window.currentAdminData);
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedLang = localStorage.getItem('prefLang') || 'fr';
+            setLanguage(savedLang);
+        });
+
+        // === SPA ROUTING ===
+        window.switchView = (view) => {
+            if(view === 'admin') {
+                document.getElementById('clientView').classList.add('hidden');
+                document.getElementById('adminView').classList.remove('hidden');
+                window.scrollTo(0, 0);
+            } else {
+                document.getElementById('adminView').classList.add('hidden');
+                document.getElementById('clientView').classList.remove('hidden');
+                window.scrollTo(0, 0);
+            }
+        };
+
+        // === CONDITIONAL FORM LOGIC ===
+        const statusSelect = document.getElementById('statusSelect');
+        const studentFields = document.getElementById('studentFields');
+        const nonStudentFields = document.getElementById('nonStudentFields');
+        const employmentSelect = document.getElementById('employmentSelect');
+        const jobField = document.getElementById('jobField');
+
+        const setRequired = (container, isRequired) => {
+            container.querySelectorAll('input, select').forEach(input => input.required = isRequired);
+        };
+
+        statusSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'student') {
+                studentFields.classList.add('show'); setRequired(studentFields, true);
+                nonStudentFields.classList.remove('show'); setRequired(nonStudentFields, false);
+                jobField.classList.remove('show'); setRequired(jobField, false);
+                employmentSelect.value = ""; 
+            } else if (e.target.value === 'non-student') {
+                nonStudentFields.classList.add('show'); setRequired(nonStudentFields, true); 
+                studentFields.classList.remove('show'); setRequired(studentFields, false);
+                studentFields.querySelectorAll('input').forEach(input => input.value = ""); 
+            }
+        });
+
+        employmentSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'employed') {
+                jobField.classList.add('show'); setRequired(jobField, true);
+            } else {
+                jobField.classList.remove('show'); setRequired(jobField, false);
+                document.getElementById('jobName').value = ""; 
+            }
+        });
+
+        // === CLIENT SUBMISSION LOGIC ===
+        document.getElementById('reservationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.style.opacity = '0.5';
+
+            try {
+                const payload = {
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    birthday: document.getElementById('birthday').value,
+                    wilaya: document.getElementById('wilaya').value,
+                    phone: document.getElementById('phone').value,
+                    email: document.getElementById('email').value,
+                    statusSelection: document.getElementById('statusSelect').value,
+                    paymentStatus: "pending"
+                };
+
+                if (payload.statusSelection === 'student') {
+                    payload.specialization = document.getElementById('specialization').value;
+                    payload.level = document.getElementById('level').value;
+                    payload.university = document.getElementById('university').value;
+                } else if (payload.statusSelection === 'non-student') {
+                    payload.employmentStatus = document.getElementById('employmentSelect').value;
+                    if (payload.employmentStatus === 'employed') payload.jobName = document.getElementById('jobName').value;
+                }
+
+                if(db) {
+                    payload.createdAt = serverTimestamp();
+                    await addDoc(collection(db, "reservations"), payload);
+                } else {
+                    await new Promise(r => setTimeout(r, 1000)); // Demo delay
+                }
+                
+                document.getElementById('reservationForm').reset();
+                studentFields.classList.remove('show');
+                nonStudentFields.classList.remove('show');
+                jobField.classList.remove('show');
+                
+                const msgEl = document.getElementById('formMessage');
+                msgEl.textContent = translations[document.documentElement.lang].msgSuccess;
+                msgEl.classList.remove('hidden');
+                msgEl.style.color = 'var(--neon-blue)';
+            } catch (error) {
+                console.error("Error: ", error);
+                alert("Erreur de connexion / Connection error");
+            } finally {
+                btn.disabled = false; btn.style.opacity = '1';
+            }
+        });
+
+        // === ADMIN LOGIC ===
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const pwd = document.getElementById('adminPwd').value;
+            if (pwd === "admin123") {
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('dashboardSection').classList.remove('hidden');
+                initAdminDashboard();
+            } else {
+                alert("Mot de passe incorrect. (admin123)");
+            }
+        });
+
+        function initAdminDashboard() {
+            if(!db) {
+                window.currentAdminData = [
+                    { id: '1', firstName: 'Jean', lastName: 'Dupont', phone: '0612345678', status: 'pending' },
+                    { id: '2', firstName: 'Ahmed', lastName: 'Benali', phone: '0798765432', status: 'paid' }
+                ];
+                renderTable(window.currentAdminData);
+                return;
+            }
+
+            onSnapshot(collection(db, "reservations"), (snapshot) => {
+                const data = [];
+                snapshot.forEach((doc) => data.push({ id: doc.id, status: doc.data().paymentStatus || doc.data().status, ...doc.data() }));
+                window.currentAdminData = data; 
+                renderTable(data);
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('dataTable');
+            const lang = document.documentElement.lang;
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                const statusText = item.status === 'paid' ? translations[lang].statusPaid : translations[lang].statusPending;
+                const statusClass = item.status === 'paid' ? 'paid' : 'pending';
+
+                tr.innerHTML = `
+                    <td>${item.firstName}</td>
+                    <td>${item.lastName}</td>
+                    <td>${item.phone}</td>
+                    <td><span class="status ${statusClass}">${statusText}</span></td>
+                    <td>
+                        ${item.status === 'pending' ? `<button class="btn-gold btn-sm" onclick="markPaid('${item.id}')">${translations[lang].btnPaid}</button>` : ''}
+                        <button class="btn-gold btn-sm" style="background:#ff4d4d" onclick="deleteRecord('${item.id}')">${translations[lang].btnDelete}</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.markPaid = async (id) => {
+            if(!db) return alert("Firebase non configuré.");
+            await updateDoc(doc(db, "reservations", id), { paymentStatus: "paid" });
+        };
+
+        window.deleteRecord = async (id) => {
+            if(confirm("Confirmer la suppression?")) {
+                if(!db) return alert("Firebase non configuré.");
+                await deleteDoc(doc(db, "reservations", id));
+            }
+        };
+    </script>
+</body>
+</html>
