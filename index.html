@@ -257,7 +257,7 @@
     <div id="adminView" class="hidden admin-view">
         <div id="loginSection" class="glass-card login-box">
             <h2 data-i18n="adminLogin">Connexion Admin</h2>
-            <input type="password" id="adminPwd" placeholder="Mot de passe (admin123)">
+            <input type="password" id="adminPwd" placeholder="Mot de passe">
             <button class="btn-gold mt-2" id="loginBtn" data-i18n="btnLogin">Entrer</button>
         </div>
 
@@ -283,27 +283,10 @@
         <div class="view-switcher" onclick="switchView('client')" data-i18n="switchClient">⬅ Retour au site</div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-        // === FIREBASE CONFIG ===
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        
-        let db;
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-        } catch (e) {
-            console.log("Firebase not configured yet. Running in demo mode.");
-        }
+    <script>
+        // === CUSTOM BACKEND API ENDPOINT ===
+        // Change this to match your specific Replit backend URL structure.
+        const API_BASE_URL = "https://your-app.onrender.com/api/reservations";
 
         // === TRANSLATIONS ===
         const translations = {
@@ -404,7 +387,7 @@
             }
         });
 
-        // === CLIENT SUBMISSION LOGIC ===
+        // === CLIENT SUBMISSION LOGIC (CUSTOM API) ===
         document.getElementById('reservationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
@@ -419,7 +402,8 @@
                     phone: document.getElementById('phone').value,
                     email: document.getElementById('email').value,
                     statusSelection: document.getElementById('statusSelect').value,
-                    paymentStatus: "pending"
+                    paymentStatus: "pending",
+                    createdAt: new Date().toISOString()
                 };
 
                 if (payload.statusSelection === 'student') {
@@ -431,12 +415,14 @@
                     if (payload.employmentStatus === 'employed') payload.jobName = document.getElementById('jobName').value;
                 }
 
-                if(db) {
-                    payload.createdAt = serverTimestamp();
-                    await addDoc(collection(db, "reservations"), payload);
-                } else {
-                    await new Promise(r => setTimeout(r, 1000)); // Demo delay
-                }
+                // POST to Custom REST API
+                const response = await fetch(API_BASE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Failed to submit reservation");
                 
                 document.getElementById('reservationForm').reset();
                 studentFields.classList.remove('show');
@@ -455,34 +441,36 @@
             }
         });
 
-        // === ADMIN LOGIC ===
+        // === ADMIN DASHBOARD LOGIC (CUSTOM API) ===
         document.getElementById('loginBtn').addEventListener('click', () => {
             const pwd = document.getElementById('adminPwd').value;
             if (pwd === "admin123") {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
-                initAdminDashboard();
+                fetchAdminData(); // Initial load
             } else {
-                alert("Mot de passe incorrect. (admin123)");
+                alert("Mot de passe incorrect.");
             }
         });
 
-        function initAdminDashboard() {
-            if(!db) {
-                window.currentAdminData = [
-                    { id: '1', firstName: 'Jean', lastName: 'Dupont', phone: '0612345678', status: 'pending' },
-                    { id: '2', firstName: 'Ahmed', lastName: 'Benali', phone: '0798765432', status: 'paid' }
-                ];
-                renderTable(window.currentAdminData);
-                return;
+        async function fetchAdminData() {
+            try {
+                const response = await fetch(API_BASE_URL);
+                if (!response.ok) throw new Error("Failed to fetch records");
+                
+                const data = await response.json();
+                
+                // Map status properly based on what your API returns
+                const normalizedData = data.map(item => ({
+                    ...item,
+                    status: item.paymentStatus || item.status || 'pending'
+                }));
+                
+                window.currentAdminData = normalizedData; 
+                renderTable(normalizedData);
+            } catch (error) {
+                console.error("Error fetching admin data: ", error);
             }
-
-            onSnapshot(collection(db, "reservations"), (snapshot) => {
-                const data = [];
-                snapshot.forEach((doc) => data.push({ id: doc.id, status: doc.data().paymentStatus || doc.data().status, ...doc.data() }));
-                window.currentAdminData = data; 
-                renderTable(data);
-            });
         }
 
         function renderTable(data) {
@@ -494,6 +482,10 @@
                 const tr = document.createElement('tr');
                 const statusText = item.status === 'paid' ? translations[lang].statusPaid : translations[lang].statusPending;
                 const statusClass = item.status === 'paid' ? 'paid' : 'pending';
+                
+                // Note: Make sure your API returns the document ID as '_id' or 'id'. 
+                // Using (item._id || item.id) to handle common MongoDB/SQL patterns.
+                const recordId = item._id || item.id; 
 
                 tr.innerHTML = `
                     <td>${item.firstName}</td>
@@ -501,23 +493,52 @@
                     <td>${item.phone}</td>
                     <td><span class="status ${statusClass}">${statusText}</span></td>
                     <td>
-                        ${item.status === 'pending' ? `<button class="btn-gold btn-sm" onclick="markPaid('${item.id}')">${translations[lang].btnPaid}</button>` : ''}
-                        <button class="btn-gold btn-sm" style="background:#ff4d4d" onclick="deleteRecord('${item.id}')">${translations[lang].btnDelete}</button>
+                        ${item.status === 'pending' ? `<button class="btn-gold btn-sm" onclick="markPaid('${recordId}')">${translations[lang].btnPaid}</button>` : ''}
+                        <button class="btn-gold btn-sm" style="background:#ff4d4d" onclick="deleteRecord('${recordId}')">${translations[lang].btnDelete}</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
+        // UPDATE (PUT) Request
         window.markPaid = async (id) => {
-            if(!db) return alert("Firebase non configuré.");
-            await updateDoc(doc(db, "reservations", id), { paymentStatus: "paid" });
+            try {
+                const response = await fetch(`${API_BASE_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentStatus: "paid" })
+                });
+
+                if (response.ok) {
+                    await fetchAdminData(); // Refresh the table automatically
+                } else {
+                    alert("Erreur lors de la mise à jour / Error updating record.");
+                }
+            } catch (error) {
+                console.error("Error marking as paid: ", error);
+            }
         };
 
+        // DELETE Request
         window.deleteRecord = async (id) => {
-            if(confirm("Confirmer la suppression?")) {
-                if(!db) return alert("Firebase non configuré.");
-                await deleteDoc(doc(db, "reservations", id));
+            const lang = document.documentElement.lang;
+            const confirmMsg = lang === 'fr' ? "Confirmer la suppression?" : lang === 'ar' ? "تأكيد الحذف؟" : "Confirm delete?";
+
+            if(confirm(confirmMsg)) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        await fetchAdminData(); // Refresh the table automatically
+                    } else {
+                        alert("Erreur lors de la suppression / Error deleting record.");
+                    }
+                } catch (error) {
+                    console.error("Error deleting record: ", error);
+                }
             }
         };
     </script>
