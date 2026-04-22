@@ -257,7 +257,7 @@
     <div id="adminView" class="hidden admin-view">
         <div id="loginSection" class="glass-card login-box">
             <h2 data-i18n="adminLogin">Connexion Admin</h2>
-            <input type="password" id="adminPwd" placeholder="Mot de passe (admin123)">
+            <input type="password" id="adminPwd" placeholder="Mot de passe ">
             <button class="btn-gold mt-2" id="loginBtn" data-i18n="btnLogin">Entrer</button>
         </div>
 
@@ -449,7 +449,7 @@
                 document.getElementById('dashboardSection').classList.remove('hidden');
                 fetchAdminData(); // Initial load
             } else {
-                alert("Mot de passe incorrect. (admin123)");
+                alert("Mot de passe incorrect");
             }
         });
 
