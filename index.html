@@ -485,7 +485,8 @@
                 
                 // Note: Make sure your API returns the document ID as '_id' or 'id'. 
                 // Using (item._id || item.id) to handle common MongoDB/SQL patterns.
-                const recordId = item._id || item.id; 
+                const recordId = item._id ? item._id.toString() : null;
+                console.log("DELETE ID:", recordId);
 
                 tr.innerHTML = `
                     <td>${item.firstName}</td>
@@ -493,8 +494,8 @@
                     <td>${item.phone}</td>
                     <td><span class="status ${statusClass}">${statusText}</span></td>
                     <td>
-                        ${item.status === 'pending' ? `<button class="btn-gold btn-sm" onclick="markPaid('${recordId}')">${translations[lang].btnPaid}</button>` : ''}
-                        <button class="btn-gold btn-sm" style="background:#ff4d4d" onclick="deleteRecord('${recordId}')">${translations[lang].btnDelete}</button>
+                        ${(item.status === 'pending' && recordId) ? `<button class="btn-gold btn-sm" onclick="markPaid('${recordId}')">${translations[lang].btnPaid}</button>` : ''}
+                        ${recordId ? `<button class="btn-gold btn-sm" style="background:#ff4d4d" onclick="deleteRecord('${recordId}')">${translations[lang].btnDelete}</button>` : ''}
                     </td>
                 `;
                 tbody.appendChild(tr);
