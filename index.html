@@ -125,9 +125,9 @@
     <nav class="glass-nav">
         <div class="logo" data-i18n="navTitle">Banque & Assurance</div>
         <div class="lang-switcher">
-            <button onclick="setLanguage('fr')">FR</button>
-            <button onclick="setLanguage('ar')">AR</button>
-            <button onclick="setLanguage('en')">EN</button>
+            <button onclick="window.setLanguage('fr')">FR</button>
+            <button onclick="window.setLanguage('ar')">AR</button>
+            <button onclick="window.setLanguage('en')">EN</button>
         </div>
     </nav>
 
@@ -251,7 +251,7 @@
             </div>
         </section>
 
-        <div class="view-switcher" onclick="switchView('admin')" data-i18n="switchAdmin">🔒 Accès Administrateur</div>
+        <div class="view-switcher" onclick="window.switchView('admin')" data-i18n="switchAdmin">🔒 Accès Administrateur</div>
     </div>
 
     <div id="adminView" class="hidden admin-view">
@@ -259,17 +259,22 @@
             <h2 data-i18n="adminLogin">Connexion Admin</h2>
             <input type="password" id="adminPwd" placeholder="Mot de passe ">
             <button class="btn-gold mt-2" id="loginBtn" data-i18n="btnLogin">Entrer</button>
+            <div id="loginError" class="hidden text-red-500 mt-2 text-sm" style="color: #ff4d4d;"></div>
         </div>
 
         <div id="dashboardSection" class="hidden container">
             <h2 class="section-title" data-i18n="adminTitle">Inscriptions Récentes</h2>
+            <div id="adminMessage" class="hidden text-center mt-2 mb-4 p-2 rounded text-sm text-white"></div>
             <div class="glass-card" style="overflow-x: auto;">
                 <table class="admin-table">
                     <thead>
                         <tr>
                             <th data-i18n="colFirstName">Prénom</th>
                             <th data-i18n="colLastName">Nom</th>
+                            <th data-i18n="colEmail">Email</th>
                             <th data-i18n="colPhone">Téléphone</th>
+                            <th data-i18n="colWilaya">Wilaya</th>
+                            <th data-i18n="colDetails">Détails</th>
                             <th data-i18n="colStatus">Statut</th>
                             <th data-i18n="colAction">Actions</th>
                         </tr>
@@ -280,13 +285,75 @@
             </div>
         </div>
 
-        <div class="view-switcher" onclick="switchView('client')" data-i18n="switchClient">⬅ Retour au site</div>
+        <div class="view-switcher" onclick="window.switchView('client')" data-i18n="switchClient">⬅ Retour au site</div>
     </div>
 
-    <script>
-        // === CUSTOM BACKEND API ENDPOINT ===
-        // Change this to match your specific Replit backend URL structure.
-        const API_BASE_URL = "https://reservation-api-jyod.onrender.com/api/reservations";
+    <!-- Personalized Signature -->
+    <div style="text-align: center; color: var(--text-muted); padding: 2rem; font-size: 0.9rem;">
+        ~ tuki
+    </div>
+
+    <script type="module">
+        // === FIREBASE IMPORTS ===
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Initialize Firebase Backend
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let currentUser = null;
+        window.currentAdminData = [];
+
+        // 1. Authenticate FIRST
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Authentication error:", error);
+            }
+        };
+        initAuth();
+
+        // 2. Listen for Auth State Changes & Set up Data Stream
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                setupRealtimeListener();
+            }
+        });
+
+        function setupRealtimeListener() {
+            if (!currentUser) return;
+            
+            const subsRef = collection(db, 'artifacts', appId, 'public', 'data', 'reservations');
+            
+            onSnapshot(subsRef, (snapshot) => {
+                const data = [];
+                snapshot.forEach((document) => {
+                    data.push({ id: document.id, ...document.data() });
+                });
+                
+                // Sort by timestamp (newest first)
+                data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                window.currentAdminData = data;
+                
+                // If dashboard is visible, update it live
+                if (!document.getElementById('dashboardSection').classList.contains('hidden')) {
+                    renderTable(window.currentAdminData);
+                }
+            }, (error) => {
+                console.error("Error fetching data:", error);
+            });
+        }
 
         // === TRANSLATIONS ===
         const translations = {
@@ -298,7 +365,7 @@
                 optUnemployed: "Unemployed", lblJobName: "Job Name", lblWilaya: "Wilaya of residence", lblPhone: "Phone Number", noteTelegram: "Please enter a phone number active on Telegram",
                 objTitle: "Course Objectives", objIntro: "Enable participants to understand:", obj1: "How banks operate", obj2: "Types of banking services", obj3: "Insurance basics and types", obj4: "Work skills in the financial sector",
                 progTitle: "Program (8 Modules)", mod1: "1. Intro to Banking", mod2: "2. Bank Operations", mod3: "3. Credit & Loans", mod4: "4. Insurance Basics", mod5: "5. Life Insurance", mod6: "6. Property Insurance", mod7: "7. Risk Management", mod8: "8. Professional Ethics",
-                adminLogin: "Admin Login", btnLogin: "Enter", adminTitle: "Recent Registrations", colFirstName: "First Name", colLastName: "Last Name", colPhone: "Phone", colStatus: "Status", colAction: "Actions", btnPaid: "Mark Paid", btnDelete: "Delete", statusPending: "Pending", statusPaid: "Paid", switchAdmin: "🔒 Admin Access", switchClient: "⬅ Back to Site"
+                adminLogin: "Admin Login", btnLogin: "Enter", adminTitle: "Recent Registrations", colFirstName: "First Name", colLastName: "Last Name", colEmail: "Email", colPhone: "Phone", colWilaya: "Wilaya", colDetails: "Details", colStatus: "Status", colAction: "Actions", btnPaid: "Mark Paid", btnDelete: "Delete", btnConfirm: "Confirm?", statusPending: "Pending", statusPaid: "Paid", switchAdmin: "🔒 Admin Access", switchClient: "⬅ Back to Site"
             },
             fr: {
                 navTitle: "Banque & Assurance", heroTitle: "Banque et Assurance", heroSubtitle: "Formation complète", heroBtn: "S'inscrire", formTitle: "Réserver votre place",
@@ -308,7 +375,7 @@
                 optUnemployed: "Chômeur", lblJobName: "Nom du poste", lblWilaya: "Wilaya de résidence", lblPhone: "Téléphone", noteTelegram: "Veuillez entrer un numéro actif sur Telegram",
                 objTitle: "Objectifs de la formation", objIntro: "Permettre aux participants de comprendre :", obj1: "Comment fonctionnent les banques", obj2: "Les types de services bancaires", obj3: "Les fondamentaux de l'assurance", obj4: "Compétences du secteur financier",
                 progTitle: "Programme (8 Modules)", mod1: "1. Intro à la Banque", mod2: "2. Opérations", mod3: "3. Crédits", mod4: "4. Bases Assurance", mod5: "5. Assurance Vie", mod6: "6. Assurance Dommages", mod7: "7. Gestion Risques", mod8: "8. Éthique Pro.",
-                adminLogin: "Connexion Admin", btnLogin: "Entrer", adminTitle: "Inscriptions Récentes", colFirstName: "Prénom", colLastName: "Nom", colPhone: "Téléphone", colStatus: "Statut", colAction: "Actions", btnPaid: "Payé", btnDelete: "Supprimer", statusPending: "En attente", statusPaid: "Payé", switchAdmin: "🔒 Accès Administrateur", switchClient: "⬅ Retour au site"
+                adminLogin: "Connexion Admin", btnLogin: "Entrer", adminTitle: "Inscriptions Récentes", colFirstName: "Prénom", colLastName: "Nom", colEmail: "Email", colPhone: "Téléphone", colWilaya: "Wilaya", colDetails: "Détails", colStatus: "Statut", colAction: "Actions", btnPaid: "Payé", btnDelete: "Supprimer", btnConfirm: "Confirmer?", statusPending: "En attente", statusPaid: "Payé", switchAdmin: "🔒 Accès Administrateur", switchClient: "⬅ Retour au site"
             },
             ar: {
                 navTitle: "بنوك وتأمين", heroTitle: "بنوك وتأمين", heroSubtitle: "دورة شاملة", heroBtn: "سجل الآن", formTitle: "احجز مقعدك",
@@ -318,7 +385,7 @@
                 optUnemployed: "بطال", lblJobName: "اسم الوظيفة", lblWilaya: "الولاية", lblPhone: "رقم الهاتف", noteTelegram: "يرجى إدخال رقم هاتف مفعل على تيليجرام",
                 objTitle: "أهداف الدورة", objIntro: "تمكين المشاركين من فهم:", obj1: "كيفية عمل البنوك", obj2: "أنواع الخدمات البنكية", obj3: "أساسيات التأمين", obj4: "مهارات القطاع المالي",
                 progTitle: "البرنامج (8 وحدات)", mod1: "1. مقدمة في البنوك", mod2: "2. العمليات المصرفية", mod3: "3. الائتمان", mod4: "4. أساسيات التأمين", mod5: "5. تأمين الحياة", mod6: "6. تأمين الممتلكات", mod7: "7. إدارة المخاطر", mod8: "8. أخلاقيات المهنة",
-                adminLogin: "تسجيل دخول الإدارة", btnLogin: "دخول", adminTitle: "التسجيلات الحديثة", colFirstName: "الاسم", colLastName: "اللقب", colPhone: "الهاتف", colStatus: "الحالة", colAction: "إجراءات", btnPaid: "تم الدفع", btnDelete: "حذف", statusPending: "قيد الانتظار", statusPaid: "مدفوع", switchAdmin: "🔒 دخول الإدارة", switchClient: "⬅ العودة للموقع"
+                adminLogin: "تسجيل دخول الإدارة", btnLogin: "دخول", adminTitle: "التسجيلات الحديثة", colFirstName: "الاسم", colLastName: "اللقب", colEmail: "البريد", colPhone: "الهاتف", colWilaya: "الولاية", colDetails: "التفاصيل", colStatus: "الحالة", colAction: "إجراءات", btnPaid: "تم الدفع", btnDelete: "حذف", btnConfirm: "تأكيد؟", statusPending: "قيد الانتظار", statusPaid: "مدفوع", switchAdmin: "🔒 دخول الإدارة", switchClient: "⬅ العودة للموقع"
             }
         };
 
@@ -333,12 +400,14 @@
                 if(translations[lang][key]) el.textContent = translations[lang][key];
             });
 
-            if(window.currentAdminData) renderTable(window.currentAdminData);
+            if(window.currentAdminData && !document.getElementById('dashboardSection').classList.contains('hidden')) {
+                renderTable(window.currentAdminData);
+            }
         };
 
         document.addEventListener("DOMContentLoaded", () => {
             const savedLang = localStorage.getItem('prefLang') || 'fr';
-            setLanguage(savedLang);
+            window.setLanguage(savedLang);
         });
 
         // === SPA ROUTING ===
@@ -387,10 +456,19 @@
             }
         });
 
-        // === CLIENT SUBMISSION LOGIC (CUSTOM API) ===
+        // === CLIENT SUBMISSION LOGIC (FIREBASE) ===
         document.getElementById('reservationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
+            const msgEl = document.getElementById('formMessage');
+            
+            if (!currentUser) {
+                msgEl.textContent = "Connexion à la base de données en cours. Veuillez réessayer dans un instant.";
+                msgEl.classList.remove('hidden');
+                msgEl.style.color = 'var(--status-pending)';
+                return;
+            }
+            
             btn.disabled = true; btn.style.opacity = '0.5';
 
             try {
@@ -402,8 +480,8 @@
                     phone: document.getElementById('phone').value,
                     email: document.getElementById('email').value,
                     statusSelection: document.getElementById('statusSelect').value,
-                    paymentStatus: "pending",
-                    createdAt: new Date().toISOString()
+                    status: "pending", // Default payment status
+                    createdAt: Date.now() // For sorting
                 };
 
                 if (payload.statusSelection === 'student') {
@@ -415,131 +493,135 @@
                     if (payload.employmentStatus === 'employed') payload.jobName = document.getElementById('jobName').value;
                 }
 
-                // POST to Custom REST API
-                const response = await fetch(API_BASE_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                // POST to Firebase Cloud Database
+                const subsRef = collection(db, 'artifacts', appId, 'public', 'data', 'reservations');
+                await addDoc(subsRef, payload);
 
-                if (!response.ok) throw new Error("Failed to submit reservation");
-                
+                // Reset form UI
                 document.getElementById('reservationForm').reset();
                 studentFields.classList.remove('show');
                 nonStudentFields.classList.remove('show');
                 jobField.classList.remove('show');
                 
-                const msgEl = document.getElementById('formMessage');
                 msgEl.textContent = translations[document.documentElement.lang].msgSuccess;
                 msgEl.classList.remove('hidden');
                 msgEl.style.color = 'var(--neon-blue)';
             } catch (error) {
                 console.error("Error: ", error);
-                alert("Erreur de connexion / Connection error");
+                msgEl.textContent = "Erreur de connexion à la base de données.";
+                msgEl.classList.remove('hidden');
+                msgEl.style.color = '#ff4d4d';
             } finally {
                 btn.disabled = false; btn.style.opacity = '1';
             }
         });
 
-        // === ADMIN DASHBOARD LOGIC (CUSTOM API) ===
+        // Admin Error Helper
+        function showAdminMsg(text, isError=false) {
+            const msgEl = document.getElementById('adminMessage');
+            if(!msgEl) return;
+            msgEl.textContent = text;
+            msgEl.className = `text-center mt-2 mb-4 p-2 rounded text-sm text-white ${isError ? 'bg-red-600' : 'bg-green-600'}`;
+            if (isError) msgEl.style.backgroundColor = '#ff4d4d'; // fallback
+            else msgEl.style.backgroundColor = 'var(--status-paid)';
+            msgEl.classList.remove('hidden');
+            setTimeout(() => msgEl.classList.add('hidden'), 3000);
+        }
+
+        // === ADMIN DASHBOARD LOGIC (FIREBASE) ===
         document.getElementById('loginBtn').addEventListener('click', () => {
             const pwd = document.getElementById('adminPwd').value;
+            const errEl = document.getElementById('loginError');
             if (pwd === "admin123") {
+                errEl.classList.add('hidden');
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('dashboardSection').classList.remove('hidden');
-                fetchAdminData(); // Initial load
+                renderTable(window.currentAdminData);
             } else {
-                alert("Mot de passe incorrect");
+                errEl.textContent = "Mot de passe incorrect";
+                errEl.classList.remove('hidden');
             }
         });
-
-        async function fetchAdminData() {
-            try {
-                const response = await fetch(API_BASE_URL);
-                if (!response.ok) throw new Error("Failed to fetch records");
-                
-                const data = await response.json();
-                
-                // Map status properly based on what your API returns
-                const normalizedData = data.map(item => ({
-                    ...item,
-                    status: item.paymentStatus || item.status || 'pending'
-                }));
-                
-                window.currentAdminData = normalizedData; 
-                renderTable(normalizedData);
-            } catch (error) {
-                console.error("Error fetching admin data: ", error);
-            }
-        }
 
         function renderTable(data) {
             const tbody = document.getElementById('dataTable');
             const lang = document.documentElement.lang;
             tbody.innerHTML = '';
             
+            if (!data || data.length === 0) {
+                 tbody.innerHTML = `<tr><td colspan="8" class="text-center">Aucune inscription pour le moment.</td></tr>`;
+                 return;
+            }
+
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 const statusText = item.status === 'paid' ? translations[lang].statusPaid : translations[lang].statusPending;
                 const statusClass = item.status === 'paid' ? 'paid' : 'pending';
-                
-                // Note: Make sure your API returns the document ID as '_id' or 'id'. 
-                // Using (item._id || item.id) to handle common MongoDB/SQL patterns.
-                const recordId = item._id ? item._id.toString() : null;
-                console.log("DELETE ID:", recordId);
+                const recordId = item.id;
+
+                let detailsText = '';
+                if (item.statusSelection === 'student') {
+                    detailsText = `🎓 <b>${translations[lang].optStudent}</b><br>${translations[lang].lblSpecialization}: ${item.specialization || '-'}<br>${translations[lang].lblLevel}: ${item.level || '-'}<br>${translations[lang].lblUniversity}: ${item.university || '-'}`;
+                } else if (item.statusSelection === 'non-student') {
+                    const emp = item.employmentStatus === 'employed' ? translations[lang].optEmployed : translations[lang].optUnemployed;
+                    detailsText = `💼 <b>${emp}</b>` + (item.jobName ? `<br>${translations[lang].lblJobName}: ${item.jobName}` : '');
+                }
 
                 tr.innerHTML = `
                     <td>${item.firstName}</td>
                     <td>${item.lastName}</td>
+                    <td>${item.email || '-'}</td>
                     <td>${item.phone}</td>
+                    <td>${item.wilaya || '-'}</td>
+                    <td style="font-size: 0.85em; min-width: 150px; line-height: 1.4;">
+                        ${item.birthday ? `🎂 ${item.birthday}<br>` : ''}
+                        ${detailsText}
+                    </td>
                     <td><span class="status ${statusClass}">${statusText}</span></td>
-                    <td>
-                        ${(item.status === 'pending' && recordId) ? `<button class="btn-gold btn-sm" onclick="markPaid('${recordId}')">${translations[lang].btnPaid}</button>` : ''}
-                        ${recordId ? `<button class="btn-gold btn-sm" style="background:#ff4d4d" onclick="deleteRecord('${recordId}')">${translations[lang].btnDelete}</button>` : ''}
+                    <td style="min-width: 130px;">
+                        ${(item.status === 'pending' && recordId) ? `<button class="btn-gold btn-sm" onclick="window.markPaid('${recordId}')">${translations[lang].btnPaid}</button>` : ''}
+                        ${recordId ? `<button class="btn-gold btn-sm" style="background:#ff4d4d" onclick="window.deleteRecord('${recordId}', this)">${translations[lang].btnDelete}</button>` : ''}
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // UPDATE (PUT) Request
+        // UPDATE (PUT) Request replacement via Firebase
         window.markPaid = async (id) => {
+            if (!currentUser) return;
             try {
-                const response = await fetch(`${API_BASE_URL}/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentStatus: "paid" })
-                });
-
-                if (response.ok) {
-                    await fetchAdminData(); // Refresh the table automatically
-                } else {
-                    alert("Erreur lors de la mise à jour / Error updating record.");
-                }
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reservations', id);
+                await updateDoc(docRef, { status: "paid" });
+                showAdminMsg("Statut mis à jour / Status updated");
             } catch (error) {
                 console.error("Error marking as paid: ", error);
+                showAdminMsg("Erreur lors de la mise à jour", true);
             }
         };
 
-        // DELETE Request
-        window.deleteRecord = async (id) => {
+        // DELETE Request replacement via Firebase
+        window.deleteRecord = async (id, btn) => {
+            if (!currentUser) return;
             const lang = document.documentElement.lang;
-            const confirmMsg = lang === 'fr' ? "Confirmer la suppression?" : lang === 'ar' ? "تأكيد الحذف؟" : "Confirm delete?";
+            
+            // Secure inline confirmation (bypass iframe alert blockage)
+            if (btn && btn.innerText !== translations[lang].btnConfirm) {
+                const originalText = btn.innerText;
+                btn.innerText = translations[lang].btnConfirm;
+                setTimeout(() => { 
+                    if(btn && document.contains(btn)) btn.innerText = originalText; 
+                }, 3000);
+                return;
+            }
 
-            if(confirm(confirmMsg)) {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/${id}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (response.ok) {
-                        await fetchAdminData(); // Refresh the table automatically
-                    } else {
-                        alert("Erreur lors de la suppression / Error deleting record.");
-                    }
-                } catch (error) {
-                    console.error("Error deleting record: ", error);
-                }
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reservations', id);
+                await deleteDoc(docRef);
+                showAdminMsg("Inscription supprimée / Record deleted");
+            } catch (error) {
+                console.error("Error deleting record: ", error);
+                showAdminMsg("Erreur lors de la suppression", true);
             }
         };
     </script>
